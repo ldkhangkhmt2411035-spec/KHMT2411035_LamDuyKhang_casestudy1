@@ -1,7 +1,6 @@
-// Model Expense — Buổi 3 (bản khớp đúng mockup "Thêm/Sửa giao dịch").
-// Bổ sung so với bản trước: category có icon riêng, có "note" (ghi chú),
-// và "type" (Chi tiêu / Thu nhập) theo đúng 2 nút chọn trên mockup.
-// CHƯA có toMap()/fromMap() vì chưa cần lưu vào SQLite (phần đó ở Buổi 5-6).
+// Model Expense — dùng chung từ Buổi 3 trở đi.
+// Danh mục khớp đúng mockup Dashboard (Buổi 4): Ăn uống, Di chuyển,
+// Mua sắm, Giáo dục, Khác (chi tiêu) và Thu nhập (thu nhập).
 import 'package:flutter/material.dart';
 
 enum TransactionType { expense, income } // Chi tiêu / Thu nhập
@@ -18,24 +17,26 @@ class CategoryOption {
   });
 }
 
-// Danh sách danh mục mẫu, khớp icon trong mockup (Ăn uống = icon cái nĩa).
 const List<CategoryOption> expenseCategories = [
-  CategoryOption(name: 'Ăn uống', icon: Icons.restaurant, color: Color(0xFFE8734A)),
-  CategoryOption(name: 'Di chuyển', icon: Icons.directions_bus, color: Color(0xFF4A90E2)),
-  CategoryOption(name: 'Mua sắm', icon: Icons.shopping_bag, color: Color(0xFF9B59B6)),
-  CategoryOption(name: 'Học tập', icon: Icons.menu_book, color: Color(0xFF2ECC71)),
+  CategoryOption(name: 'Ăn uống', icon: Icons.restaurant, color: Color(0xFFF2994A)),
+  CategoryOption(name: 'Di chuyển', icon: Icons.directions_car, color: Color(0xFF2F80ED)),
+  CategoryOption(name: 'Mua sắm', icon: Icons.shopping_cart, color: Color(0xFF9B51E0)),
+  CategoryOption(name: 'Giáo dục', icon: Icons.school, color: Color(0xFF27AE94)),
   CategoryOption(name: 'Khác', icon: Icons.more_horiz, color: Color(0xFF95A5A6)),
 ];
 
 const List<CategoryOption> incomeCategories = [
-  CategoryOption(name: 'Lương', icon: Icons.account_balance_wallet, color: Color(0xFF2ECC71)),
-  CategoryOption(name: 'Thưởng', icon: Icons.card_giftcard, color: Color(0xFFF1C40F)),
-  CategoryOption(name: 'Khác', icon: Icons.more_horiz, color: Color(0xFF95A5A6)),
+  CategoryOption(name: 'Thu nhập', icon: Icons.attach_money, color: Color(0xFF27AE60)),
 ];
+
+CategoryOption categoryInfoFor(TransactionType type, String name) {
+  final list = type == TransactionType.expense ? expenseCategories : incomeCategories;
+  return list.firstWhere((c) => c.name == name, orElse: () => list.first);
+}
 
 class Expense {
   final String id;
-  final String title; // dùng tên danh mục làm tiêu đề hiển thị khi cần
+  final String title;
   final double amount;
   final String category;
   final String note;
@@ -52,8 +53,6 @@ class Expense {
     required this.type,
   });
 
-  // Buổi 6, mục "copyWith": tiện cho việc Sửa giao dịch mà không cần
-  // tạo lại toàn bộ object từ đầu.
   Expense copyWith({
     String? title,
     double? amount,
