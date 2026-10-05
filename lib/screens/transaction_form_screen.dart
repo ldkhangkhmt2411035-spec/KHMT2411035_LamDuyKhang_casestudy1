@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../models/expense.dart';
+import '../repository/expense_repository.dart';
 
-// Buổi 3 — màn hình dùng chung cho cả "Thêm giao dịch" và "Sửa giao dịch",
-// đúng theo 2 mockup trong đề bài (chỉ khác tiêu đề + có sẵn dữ liệu hay không).
+// Màn hình "Thêm giao dịch" / "Sửa giao dịch" — đúng mockup Buổi 3,
+// Buổi 6 nối thật vào SQLite qua ExpenseRepository thay vì chỉ trả dữ liệu.
 //
-// existingExpense == null  -> đang ở chế độ THÊM.
-// existingExpense != null  -> đang ở chế độ SỬA (các ô tự điền sẵn).
-//
-// Buổi 3: lưu tạm vào bộ nhớ (trả kết quả Expense về qua Navigator.pop).
-// Buổi 6 mới nối thật vào SQLite qua Repository.
+// existingExpense == null  -> chế độ THÊM.
+// existingExpense != null  -> chế độ SỬA (có thêm nút Xóa trên AppBar).
 class TransactionFormScreen extends StatefulWidget {
   final Expense? existingExpense;
 
@@ -20,11 +18,14 @@ class TransactionFormScreen extends StatefulWidget {
 }
 
 class _TransactionFormScreenState extends State<TransactionFormScreen> {
+  final ExpenseRepository _repository = ExpenseRepository();
+
   late TransactionType _type;
   late String _category;
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
   late DateTime _selectedDate;
+  bool _isSaving = false;
 
   bool get isEditing => widget.existingExpense != null;
 
@@ -52,9 +53,6 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     super.dispose();
   }
 
-  List<CategoryOption> get _categories =>
-      _type == TransactionType.expense ? expenseCategories : incomeCategories;
-
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -67,7 +65,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
     }
   }
 
-  void _save() {
+  Future<void> _save() async {
     final amount = double.tryParse(_amountController.text);
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -76,7 +74,9 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       return;
     }
 
-    final result = Expense(
+    setState(() => _isSaving = true);
+
+    final expense = Expense(
       id: widget.existingExpense?.id ?? DateTime.now().toIso8601String(),
       title: _category,
       amount: amount,
@@ -86,17 +86,51 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       type: _type,
     );
 
-    // Buổi 3: chỉ trả dữ liệu về màn trước qua Navigator.pop.
-    // Buổi 6 sẽ thay bằng gọi TransactionRepository để lưu vào SQLite.
-    Navigator.pop(context, result);
+    if (isEditing) {
+      await _repository.updateExpense(expense);
+    } else {
+      await _repository.insertExpense(expense);
+    }
+
+    if (!mounted) return;
+    Navigator.pop(context, true);
+  }
+
+  Future<void> _delete() async {
+    final existing = widget.existingExpense;
+    if (existing == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xóa giao dịch?'),
+        content: const Text('Giao dịch này sẽ bị xóa khỏi database.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _repository.deleteExpense(existing.id);
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final selected = _categories.firstWhere(
-          (c) => c.name == _category,
-      orElse: () => _categories.first,
-    );
+    final categories = categoriesForType(_type);
+    if (!categories.any((c) => c.name == _category)) {
+      _category = categories.first.name;
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
@@ -113,20 +147,25 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
             fontSize: 17,
           ),
         ),
+        actions: [
+          if (isEditing)
+            IconButton(
+              onPressed: _delete,
+              icon: const Icon(Icons.delete_outline, color: Colors.black87),
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Toggle Chi tiêu / Thu nhập
             Row(
               children: [
                 Expanded(
                   child: _TypeChip(
                     label: 'Chi tiêu',
                     selected: _type == TransactionType.expense,
-                    color: const Color(0xFFE8617A),
                     onTap: () {
                       setState(() {
                         _type = TransactionType.expense;
@@ -140,7 +179,6 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                   child: _TypeChip(
                     label: 'Thu nhập',
                     selected: _type == TransactionType.income,
-                    color: const Color(0xFFE8617A),
                     onTap: () {
                       setState(() {
                         _type = TransactionType.income;
@@ -161,7 +199,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                   value: _category,
                   isExpanded: true,
                   icon: const Icon(Icons.keyboard_arrow_down),
-                  items: _categories
+                  items: categories
                       .map(
                         (c) => DropdownMenuItem(
                       value: c.name,
@@ -239,16 +277,16 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: _save,
+                onPressed: _isSaving ? null : _save,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1769E0),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text(
-                  'Lưu',
-                  style: TextStyle(
+                child: Text(
+                  _isSaving ? 'Đang lưu...' : 'Lưu',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -256,35 +294,6 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                 ),
               ),
             ),
-
-            // Demo nhỏ: chỉ để tiện xem màn "Sửa giao dịch" trong lúc chưa
-            // có danh sách giao dịch thật (sẽ có ở các buổi sau).
-            if (!isEditing && selected.name.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Center(
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => TransactionFormScreen(
-                          existingExpense: Expense(
-                            id: 'demo',
-                            title: 'Ăn uống',
-                            amount: 100000,
-                            category: 'Ăn uống',
-                            note: 'Ăn trưa',
-                            date: DateTime(2025, 4, 12),
-                            type: TransactionType.expense,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text('Xem thử màn hình Sửa giao dịch (demo)'),
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -330,18 +339,17 @@ class _BoxField extends StatelessWidget {
 class _TypeChip extends StatelessWidget {
   final String label;
   final bool selected;
-  final Color color;
   final VoidCallback onTap;
 
   const _TypeChip({
     required this.label,
     required this.selected,
-    required this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    const color = Color(0xFFE8617A);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(24),

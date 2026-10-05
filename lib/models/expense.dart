@@ -26,8 +26,11 @@ const List<CategoryOption> incomeCategories = [
   CategoryOption(name: 'Thu nhập', icon: Icons.attach_money, color: Color(0xFF27AE60)),
 ];
 
+List<CategoryOption> categoriesForType(TransactionType type) =>
+    type == TransactionType.expense ? expenseCategories : incomeCategories;
+
 CategoryOption categoryInfoFor(TransactionType type, String name) {
-  final list = type == TransactionType.expense ? expenseCategories : incomeCategories;
+  final list = categoriesForType(type);
   return list.firstWhere((c) => c.name == name, orElse: () => list.first);
 }
 

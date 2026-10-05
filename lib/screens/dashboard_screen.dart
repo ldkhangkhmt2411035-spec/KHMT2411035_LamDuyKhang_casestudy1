@@ -2,33 +2,38 @@ import 'package:flutter/material.dart';
 
 import '../models/expense.dart';
 import '../utils/formatters.dart';
+import 'transaction_form_screen.dart';
 
-// Buổi 4 — màn hình Dashboard, đúng theo mockup "Quản lý thu chi".
-// Dữ liệu ở Buổi 4 là dữ liệu MẪU (sampleTransactions) để dựng giao diện.
-// Buổi 6 sẽ thay bằng dữ liệu thật đọc từ SQLite qua Repository.
+// Buổi 6: Dashboard nhận dữ liệu THẬT từ ExpenseRepository (qua HomeShell)
+// thay vì danh sách mẫu cố định như buoi4_v2.
+// Bấm vào 1 giao dịch -> mở lại TransactionFormScreen ở chế độ SỬA.
+// onChanged được gọi sau khi sửa/xóa xong để HomeShell load lại dữ liệu.
 class DashboardScreen extends StatelessWidget {
   final List<Expense> transactions;
+  final VoidCallback onChanged;
 
-  const DashboardScreen({super.key, required this.transactions});
+  const DashboardScreen({
+    super.key,
+    required this.transactions,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     final totalIncome = transactions
-        .where((t) => t.type == TransactionType.income)
-        .fold<double>(0, (sum, t) => sum + t.amount);
+        .where((e) => e.type == TransactionType.income)
+        .fold<double>(0, (sum, e) => sum + e.amount);
     final totalExpense = transactions
-        .where((t) => t.type == TransactionType.expense)
-        .fold<double>(0, (sum, t) => sum + t.amount);
+        .where((e) => e.type == TransactionType.expense)
+        .fold<double>(0, (sum, e) => sum + e.amount);
     final balance = totalIncome - totalExpense;
 
-    final recent = transactions.take(5).toList();
-
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Header(),
+          const _Header(),
           const SizedBox(height: 20),
           _BalanceCard(balance: balance),
           const SizedBox(height: 16),
@@ -36,20 +41,18 @@ class DashboardScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: _SummaryCard(
-                  title: 'TỔNG THU NHẬP',
+                  label: 'TỔNG THU NHẬP',
                   amount: totalIncome,
                   color: const Color(0xFF27AE60),
-                  backgroundColor: const Color(0xFFE8F8EE),
                   icon: Icons.arrow_downward,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: _SummaryCard(
-                  title: 'TỔNG CHI TIÊU',
+                  label: 'TỔNG CHI TIÊU',
                   amount: totalExpense,
-                  color: const Color(0xFFE05261),
-                  backgroundColor: const Color(0xFFFCEAEC),
+                  color: const Color(0xFFEB5757),
                   icon: Icons.arrow_upward,
                 ),
               ),
@@ -61,7 +64,7 @@ class DashboardScreen extends StatelessWidget {
             children: [
               const Text(
                 'Giao dịch gần đây',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               TextButton(
                 onPressed: () {},
@@ -70,18 +73,39 @@ class DashboardScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          if (recent.isEmpty)
+          if (transactions.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: Text('Chưa có giao dịch nào')),
+              child: Center(
+                child: Text(
+                  'Chưa có giao dịch nào.\nBấm nút + để thêm giao dịch mới.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
             )
           else
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: recent.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, index) => _TransactionTile(recent[index]),
+              itemCount: transactions.take(5).length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final expense = transactions[index];
+                return _TransactionTile(
+                  expense: expense,
+                  onTap: () async {
+                    final result = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            TransactionFormScreen(existingExpense: expense),
+                      ),
+                    );
+                    if (result == true) onChanged();
+                  },
+                );
+              },
             ),
         ],
       ),
@@ -90,20 +114,22 @@ class DashboardScreen extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
+  const _Header();
+
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Icon(Icons.menu, size: 26),
+        const Icon(Icons.menu, color: Colors.black87),
         const Text(
           'Quản lý thu chi',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
         ),
         Stack(
           clipBehavior: Clip.none,
           children: [
-            const Icon(Icons.notifications_none, size: 26),
+            const Icon(Icons.notifications_none, color: Colors.black87),
             Positioned(
               right: -2,
               top: -2,
@@ -113,11 +139,9 @@ class _Header extends StatelessWidget {
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                 child: const Text(
                   '3',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white, fontSize: 10),
+                  style: TextStyle(color: Colors.white, fontSize: 9),
                 ),
               ),
             ),
@@ -138,12 +162,12 @@ class _BalanceCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
         gradient: const LinearGradient(
           colors: [Color(0xFF1B5FCC), Color(0xFF4A90E2)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
       ),
       child: Stack(
         children: [
@@ -154,10 +178,11 @@ class _BalanceCard extends StatelessWidget {
                 children: const [
                   Text(
                     'SỐ DƯ HIỆN TẠI',
-                    style: TextStyle(color: Colors.white70, fontSize: 12, letterSpacing: 0.5),
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                   SizedBox(width: 6),
-                  Icon(Icons.visibility_outlined, color: Colors.white70, size: 16),
+                  Icon(Icons.remove_red_eye_outlined,
+                      color: Colors.white70, size: 16),
                 ],
               ),
               const SizedBox(height: 10),
@@ -165,23 +190,24 @@ class _BalanceCard extends StatelessWidget {
                 formatCurrency(balance),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 32,
+                  fontSize: 26,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 16),
               Row(
-                children: List.generate(4, (i) {
-                  return Container(
+                children: List.generate(
+                  4,
+                      (i) => Container(
                     margin: const EdgeInsets.only(right: 6),
-                    width: i == 0 ? 18 : 6,
+                    width: i == 0 ? 16 : 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: i == 0 ? Colors.white : Colors.white38,
+                      color: Colors.white.withOpacity(i == 0 ? 1 : 0.5),
                       borderRadius: BorderRadius.circular(3),
                     ),
-                  );
-                }),
+                  ),
+                ),
               ),
             ],
           ),
@@ -191,16 +217,14 @@ class _BalanceCard extends StatelessWidget {
             bottom: 0,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.all(14),
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.account_balance_wallet,
-                  color: Colors.white,
-                  size: 36,
-                ),
+                child: const Icon(Icons.account_balance_wallet_outlined,
+                    color: Colors.white),
               ),
             ),
           ),
@@ -211,17 +235,15 @@ class _BalanceCard extends StatelessWidget {
 }
 
 class _SummaryCard extends StatelessWidget {
-  final String title;
+  final String label;
   final double amount;
   final Color color;
-  final Color backgroundColor;
   final IconData icon;
 
   const _SummaryCard({
-    required this.title,
+    required this.label,
     required this.amount,
     required this.color,
-    required this.backgroundColor,
     required this.icon,
   });
 
@@ -230,26 +252,33 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: color,
-            child: Icon(icon, size: 16, color: Colors.white),
+          Row(
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 11, color: Color(0xFF667085), fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             formatCurrency(amount),
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -259,47 +288,58 @@ class _SummaryCard extends StatelessWidget {
 
 class _TransactionTile extends StatelessWidget {
   final Expense expense;
-  const _TransactionTile(this.expense);
+  final VoidCallback onTap;
+
+  const _TransactionTile({required this.expense, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final info = categoryInfoFor(expense.type, expense.category);
     final isIncome = expense.type == TransactionType.income;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: info.color,
-            child: Icon(info.icon, color: Colors.white, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  expense.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${expense.category} · ${formatDateDisplay(expense.date)}',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF667085)),
-                ),
-              ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: info.color,
+              child: Icon(info.icon, size: 18, color: Colors.white),
             ),
-          ),
-          Text(
-            '${isIncome ? '+' : '-'}${formatCurrency(expense.amount)}',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: isIncome ? const Color(0xFF27AE60) : const Color(0xFFE05261),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    expense.title,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${expense.category} · ${formatDateDisplay(expense.date)}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            Text(
+              '${isIncome ? '+' : '-'}${formatCurrency(expense.amount)}',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isIncome ? const Color(0xFF27AE60) : const Color(0xFFEB5757),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
