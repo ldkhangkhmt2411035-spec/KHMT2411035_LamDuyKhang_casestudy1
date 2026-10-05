@@ -1,6 +1,3 @@
-// Hàm định dạng dùng chung cho các màn hình.
-
-// 50000 -> "50.000 đ"
 String formatCurrency(num value) {
   final isNegative = value < 0;
   final intValue = value.abs().round();
@@ -18,7 +15,6 @@ String formatCurrency(num value) {
   return '${isNegative ? '-' : ''}${buffer.toString()} đ';
 }
 
-// DateTime -> 'dd/MM/yyyy'
 String formatDateDisplay(DateTime date) {
   final d = date.day.toString().padLeft(2, '0');
   final m = date.month.toString().padLeft(2, '0');

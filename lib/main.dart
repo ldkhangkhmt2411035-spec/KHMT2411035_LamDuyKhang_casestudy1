@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'screens/home_shell.dart';
+import 'screens/database_demo_screen.dart';
 
-// Buổi 4: luyện tập riêng màn hình Dashboard (dữ liệu mẫu),
-// nên vào thẳng HomeShell để xem ngay giao diện.
 void main() {
   runApp(const ExpenseManagerApp());
 }
@@ -16,7 +14,7 @@ class ExpenseManagerApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Expense Manager',
-      home: const HomeShell(),
+      home: const DatabaseDemoScreen(),
     );
   }
 }
