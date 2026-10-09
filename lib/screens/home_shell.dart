@@ -5,6 +5,7 @@ import '../repository/expense_repository.dart';
 import 'dashboard_screen.dart';
 import 'transaction_form_screen.dart';
 import 'transaction_list_screen.dart';
+import 'statistics_screen.dart';
 
 // Buổi 6: HomeShell tải dữ liệu THẬT từ ExpenseRepository (SQLite) khi mở app,
 // và load lại mỗi khi có thay đổi (thêm / sửa / xóa) ở bất kỳ màn hình con nào.
@@ -50,7 +51,7 @@ class _HomeShellState extends State<HomeShell> {
     final pages = [
       DashboardScreen(transactions: _transactions, onChanged: _loadData),
       TransactionListScreen(transactions: _transactions, onChanged: _loadData),
-      const Center(child: Text('Thống kê (sẽ làm sau)')),
+      StatisticsScreen(transactions: _transactions),
     ];
 
     return Scaffold(
