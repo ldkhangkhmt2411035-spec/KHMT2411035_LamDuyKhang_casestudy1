@@ -32,16 +32,11 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF1B5FCC), Color(0xFF4A90E2)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        color: Colors.white,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -52,12 +47,12 @@ class WelcomeScreen extends StatelessWidget {
                   width: 96,
                   height: 96,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: const Color(0xFF1769E0).withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.account_balance_wallet_outlined,
-                    color: Colors.white,
+                    color: Color(0xFF1769E0),
                     size: 48,
                   ),
                 ),
@@ -65,7 +60,7 @@ class WelcomeScreen extends StatelessWidget {
                 const Text(
                   'Expense Manager',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Colors.black87,
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
                   ),
@@ -74,7 +69,7 @@ class WelcomeScreen extends StatelessWidget {
                 const Text(
                   'Quản lý thu chi cá nhân thông minh',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
                 ),
                 const SizedBox(height: 40),
                 SizedBox(
@@ -88,7 +83,7 @@ class WelcomeScreen extends StatelessWidget {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
+                      backgroundColor: const Color(0xFF1769E0),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -96,7 +91,7 @@ class WelcomeScreen extends StatelessWidget {
                     child: const Text(
                       'Bắt đầu',
                       style: TextStyle(
-                        color: Color(0xFF1769E0),
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),

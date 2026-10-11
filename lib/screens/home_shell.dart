@@ -6,9 +6,11 @@ import 'dashboard_screen.dart';
 import 'transaction_form_screen.dart';
 import 'transaction_list_screen.dart';
 import 'statistics_screen.dart';
+import 'profile_screen.dart';
 
-// Buổi 6: HomeShell tải dữ liệu THẬT từ ExpenseRepository (SQLite) khi mở app,
+// HomeShell tải dữ liệu THẬT từ ExpenseRepository (SQLite) khi mở app,
 // và load lại mỗi khi có thay đổi (thêm / sửa / xóa) ở bất kỳ màn hình con nào.
+// Có 4 tab: Trang chủ / Giao dịch / Thống kê / Cá nhân.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -52,6 +54,7 @@ class _HomeShellState extends State<HomeShell> {
       DashboardScreen(transactions: _transactions, onChanged: _loadData),
       TransactionListScreen(transactions: _transactions, onChanged: _loadData),
       StatisticsScreen(transactions: _transactions),
+      const ProfileScreen(),
     ];
 
     return Scaffold(
@@ -67,8 +70,10 @@ class _HomeShellState extends State<HomeShell> {
       )
           : null,
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         currentIndex: _currentIndex,
         selectedItemColor: const Color(0xFF1769E0),
+        unselectedItemColor: Colors.grey,
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
           BottomNavigationBarItem(
@@ -82,6 +87,10 @@ class _HomeShellState extends State<HomeShell> {
           BottomNavigationBarItem(
             icon: Icon(Icons.bar_chart),
             label: 'Thống kê',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: 'Cá nhân',
           ),
         ],
       ),
